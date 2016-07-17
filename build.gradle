@@ -18,6 +18,7 @@ dependencies {
     compile group: 'ch.qos.logback', name: 'logback-core', version: '1.1.7'
     compile group: 'org.glassfish.grizzly', name: 'grizzly-http-server', version: '2.3.25'
 
+    compile 'com.squareup.okhttp3:okhttp:3.4.1'
 
 
 }

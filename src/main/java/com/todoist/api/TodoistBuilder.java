@@ -20,8 +20,8 @@ public class TodoistBuilder {
 
     public TodoistBuilder withOAuthCode(String code){
         MultivaluedMap<String,String> request = new MultivaluedHashMap<>();
-        request.add("client_id","<client_id>");
-        request.add("client_secret","<client_secret>");
+        request.add("client_id","c5ab7ebac34e4ca59c8a8b5147eec2c0");
+        request.add("client_secret","7f494eee3e3b4267b7fe5d939b23167c");
         request.add("code",code);
         request.add("redirect_uri","http://localhost/success");
 

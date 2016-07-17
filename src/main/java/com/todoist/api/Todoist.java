@@ -26,16 +26,18 @@ public class Todoist {
     private final ObjectMapper objectMapper;
 
     public static void main(String[] args) throws ExecutionException, InterruptedException {
-        Future<TodoistBuilder> builderFuture = null;
-        try {
-            OAuthInterceptorServer oAuth = new OAuthInterceptorServer();
-            builderFuture = Executors.newSingleThreadExecutor().submit(oAuth);
-        } catch (IOException e) {
-        }
+//        Future<TodoistBuilder> builderFuture = null;
+//        try {
+//            OAuthInterceptorServer oAuth = new OAuthInterceptorServer();
+//            builderFuture = Executors.newSingleThreadExecutor().submit(oAuth);
+//        } catch (IOException e) {
+//        }
+//
+//        TodoistBuilder todoistBuilder = builderFuture.get();
 
-        TodoistBuilder todoistBuilder = builderFuture.get();
+        Todoist todoist = new TodoistBuilder().setToken("e208351314f24b7513ad52dc4b8455133ee77987").build();
 
-        Todoist todoist = todoistBuilder.build();
+
         try {
             todoist.addItem(new ItemBuilder().setContent("HallO").createItem());
         } catch (JsonProcessingException e) {
@@ -58,7 +60,7 @@ public class Todoist {
 
         client = WebClient
 
-                .create("https://todoist.com/API/v7",
+                .create("https://todoist.com/API/v7/",
                         Collections.singletonList(jsonProvider));
 
 
@@ -86,7 +88,7 @@ public class Todoist {
         request.add("resource_types", "[\"labels\",\"projects\",\"items\"]");
 
 
-        Response response = client.path("/sync").accept(MediaType.APPLICATION_JSON)
+        Response response = client.path("sync").accept(MediaType.APPLICATION_JSON)
                 .type(MediaType.APPLICATION_FORM_URLENCODED)
                 .post(request);
 
@@ -201,6 +203,8 @@ public class Todoist {
     public void addItem(Item item) throws JsonProcessingException {
         Project project = item.getProject();
 
+
+
         Command command = new Command();
         command.setType("item_add");
         command.setTemp_id(UUID.randomUUID().toString());
@@ -208,14 +212,25 @@ public class Todoist {
 
 
 
-        MultivaluedMap<String,String> request = new MultivaluedHashMap<>();
+        MultivaluedHashMap<String,String> request = new MultivaluedHashMap<>();
         request.add("token",token);
-        request.add("commands", objectMapper.writeValueAsString(Collections.singletonList(command)));
+        request.add("commands",
+                "[{" +
+                        "\"type\":\"item_add\"," +
+                        "\"uuid\":\""+UUID.randomUUID().toString()+"\"," +
+                        "\"temp_id\":\"2d734e75-7e2b-4e05-b915-251230de589\"," +
+                        "\"args\":{\"content\":\"TestTask\"}" +
+                "}]");
 
 
-        Response response = client.path("/sync").accept(MediaType.APPLICATION_JSON)
+
+
+        Response response =
+                client.path("sync")
+
+                        .accept(MediaType.APPLICATION_JSON)
                 .type(MediaType.APPLICATION_FORM_URLENCODED)
-                .post(request);
+                        .post(request);
 
         String s = response.readEntity(String.class);
         response.close();
