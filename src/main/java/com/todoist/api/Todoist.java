@@ -4,19 +4,15 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
+import com.google.common.collect.Lists;
 import com.todoist.api.data.*;
 import org.apache.cxf.jaxrs.client.WebClient;
 
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.MultivaluedHashMap;
-import javax.ws.rs.core.MultivaluedMap;
-import javax.ws.rs.core.Response;
-import java.io.IOException;
+import javax.ws.rs.core.*;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 
+import org.apache.cxf.jaxrs.ext.form.Form;
 public class Todoist {
 
     private HashMap<Integer, Label> labelsById;
@@ -39,7 +35,10 @@ public class Todoist {
 
 
         try {
-            todoist.addItem(new ItemBuilder().setContent("HallO").createItem());
+            todoist.addItem(new ItemBuilder()
+                    .setContent("Hallo")
+                    .withLabel(new LabelBuilder().setName("testLabel").build())
+                    .createItem());
         } catch (JsonProcessingException e) {
             e.printStackTrace();
         }
@@ -60,7 +59,7 @@ public class Todoist {
 
         client = WebClient
 
-                .create("https://todoist.com/API/v7/",
+                .create("https://todoist.com/API/v7",
                         Collections.singletonList(jsonProvider));
 
 
@@ -88,7 +87,7 @@ public class Todoist {
         request.add("resource_types", "[\"labels\",\"projects\",\"items\"]");
 
 
-        Response response = client.path("sync").accept(MediaType.APPLICATION_JSON)
+        Response response = client.replacePath("/sync").accept(MediaType.APPLICATION_JSON)
                 .type(MediaType.APPLICATION_FORM_URLENCODED)
                 .post(request);
 
@@ -200,51 +199,155 @@ public class Todoist {
         }
     }
 
+    public void addLabel(Label label) throws JsonProcessingException {
+        Command command = buildAddLabelCommand(label);
+
+
+        sendCommand(command);
+
+
+
+    private Command buildAddLabelCommand(Label label) {
+        Map<String,String> args = new HashMap<>();
+
+        args.put("name",label.getName());
+
+        if(label.getColor() != 0){
+            args.put("color",Integer.toString(label.getColor()));
+        }
+
+        if(label.getItem_order() != 0){
+            args.put("item_order",Integer.toString(label.getItem_order()));
+        }
+
+        Command command = new Command();
+        command.setType("label_add");
+        command.setTemp_id(UUID.randomUUID().toString());
+        command.setArgs(args);
+        return command;
+    }
+
     public void addItem(Item item) throws JsonProcessingException {
+        ArrayList<Command> command = buildAddItemCommand(item);
+
+
+        sendCommand(command);
+    }
+
+    private ArrayList<Command> buildAddItemCommand(Item item) throws JsonProcessingException {
+        return buildAddItemCommand(item,null);
+    }
+
+    private ArrayList<Command> buildAddItemCommand(Item item,String project_id) throws JsonProcessingException {
         Project project = item.getProject();
 
+        Map<String,String> args = new HashMap<>();
 
+        ArrayList<Command> commands = new ArrayList<>();
+
+        int i = 0;
+        args.put("content",item.getContent());
+        if(item.getLabelsAsObject() != null){
+            if(!item.getLabelsAsObject().isEmpty()) {
+
+                String[] labels = new String[item.getLabelsAsObject().size()];
+                for (Label label : item.getLabelsAsObject()) {
+                    if(label.getId() == 0){
+                        Command command = buildAddLabelCommand(label);
+                        commands.add(command);
+                        labels[i++] = command.getTemp_id();
+                    } else {
+                        labels[i++] = Integer.toString(label.getId());
+                    }
+
+                }
+                args.put("labels", objectMapper.writeValueAsString(labels));
+            }
+        }
+
+        if(project_id != null){
+            args.put("project_id",project_id);
+        } else if(project != null){
+            args.put("project_id",Integer.toString(project.getId()));
+        }
 
         Command command = new Command();
         command.setType("item_add");
         command.setTemp_id(UUID.randomUUID().toString());
-        command.setArgs(Collections.singletonMap("content","TestTask"));
+        command.setArgs(args);
+        commands.add(command);
+        return commands;
+    }
+
+    public void addProject(Project project) throws JsonProcessingException {
+        ArrayList<Command> command = buildAddProjectCommand(project);
 
 
+        sendCommand(command);
 
-        MultivaluedHashMap<String,String> request = new MultivaluedHashMap<>();
-        request.add("token",token);
-        request.add("commands",
-                "[{" +
-                        "\"type\":\"item_add\"," +
-                        "\"uuid\":\""+UUID.randomUUID().toString()+"\"," +
-                        "\"temp_id\":\"2d734e75-7e2b-4e05-b915-251230de589\"," +
-                        "\"args\":{\"content\":\"TestTask\"}" +
-                "}]");
-
-
+    }
+    private void sendCommand(Command command) throws JsonProcessingException {
+        String value = objectMapper.writeValueAsString(command);
 
 
         Response response =
-                client.path("sync")
-
+                client.replacePath("/sync")
                         .accept(MediaType.APPLICATION_JSON)
-                .type(MediaType.APPLICATION_FORM_URLENCODED)
-                        .post(request);
+                        .form(new Form().set("token",token)
+                                .set("commands",value));
 
-        String s = response.readEntity(String.class);
+        response.close();
+    }
+    private void sendCommand(ArrayList<Command> command) throws JsonProcessingException {
+        String value = objectMapper.writeValueAsString(command);
+
+
+        Response response =
+                client.replacePath("/sync")
+                        .accept(MediaType.APPLICATION_JSON)
+                        .form(new Form().set("token",token)
+                                .set("commands",value));
+
         response.close();
     }
 
-    public void addProject(Project project){
+    private ArrayList<Command> buildAddProjectCommand(Project project) throws JsonProcessingException {
+        ArrayList<Command> commands = new ArrayList<>();
+
+        String project_id = UUID.randomUUID().toString();
 
 
         Collection<Item> items = project.getItems();
+        if(items != null){
+            if(!items.isEmpty()){
+                for (Item item : items) {
+                    commands.addAll(buildAddItemCommand(item,project_id));
+                }
+            }
+        }
 
+        Map<String, String> args = new HashMap<>();
+        args.put("name",project.getName());
+
+        if(project.getColor() != 0){
+            args.put("color",Integer.toString(project.getColor()));
+        }
+
+        if(project.getIndent() != 0){
+            args.put("item_order",Integer.toString(project.getItem_order()));
+        }
+
+        if(project.getItem_order() != 0){
+            args.put("item_order",Integer.toString(project.getItem_order()));
+        }
+
+        Command command = new Command();
+        command.setType("project_add");
+        command.setTemp_id(project_id);
+        command.setArgs(args);
+        commands.add(command);
+        return commands;
     }
 
-    public void addLabel(Label label){
-
-    }
 
 }
