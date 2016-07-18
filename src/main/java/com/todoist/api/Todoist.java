@@ -6,9 +6,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
 import com.google.common.collect.Lists;
 import com.todoist.api.data.*;
+import com.todoist.api.internal.ILocalStorage;
 import org.apache.cxf.jaxrs.client.WebClient;
 
 import javax.ws.rs.core.*;
+import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
 
@@ -44,12 +46,16 @@ public class Todoist {
         }
     }
 
+    private ILocalStorage localStorage;
+
     private String token;
     private SyncRequest state;
 
     private final WebClient client;
 
     public Todoist(String token) {
+        this.token = token;
+
         objectMapper = new ObjectMapper();
 
         objectMapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
@@ -63,11 +69,27 @@ public class Todoist {
                         Collections.singletonList(jsonProvider));
 
 
-        this.token = token;
-
         sync();
     }
 
+    public void store() throws IOException {
+        if(localStorage == null){
+            throw new IllegalStateException("LocalStorage not define");
+        }
+        localStorage.storeToken(token);
+    }
+
+    public Todoist(ILocalStorage localStorage) throws IOException {
+        this(localStorage.load().getToken());
+        this.localStorage = localStorage;
+    }
+
+    public Todoist(String token,ILocalStorage localStorage) throws IOException {
+        this(token);
+        this.localStorage = localStorage;
+        localStorage.load();
+        localStorage.storeToken(token);
+    }
 
     /**
      * fetch updates
@@ -201,11 +223,25 @@ public class Todoist {
 
     public void addLabel(Label label) throws JsonProcessingException {
         Command command = buildAddLabelCommand(label);
-
-
         sendCommand(command);
+        sync();
+    }
 
+    public void addItem(Item item) throws JsonProcessingException {
+        ArrayList<Command> command = buildAddItemCommand(item);
+        sendCommand(command);
+        sync();
+    }
 
+    public void addProject(Project project) throws JsonProcessingException {
+        ArrayList<Command> command = buildAddProjectCommand(project);
+        sendCommand(command);
+        sync();
+    }
+
+    private ArrayList<Command> buildAddItemCommand(Item item) throws JsonProcessingException {
+        return buildAddItemCommand(item,null);
+    }
 
     private Command buildAddLabelCommand(Label label) {
         Map<String,String> args = new HashMap<>();
@@ -226,18 +262,6 @@ public class Todoist {
         command.setArgs(args);
         return command;
     }
-
-    public void addItem(Item item) throws JsonProcessingException {
-        ArrayList<Command> command = buildAddItemCommand(item);
-
-
-        sendCommand(command);
-    }
-
-    private ArrayList<Command> buildAddItemCommand(Item item) throws JsonProcessingException {
-        return buildAddItemCommand(item,null);
-    }
-
     private ArrayList<Command> buildAddItemCommand(Item item,String project_id) throws JsonProcessingException {
         Project project = item.getProject();
 
@@ -278,39 +302,6 @@ public class Todoist {
         commands.add(command);
         return commands;
     }
-
-    public void addProject(Project project) throws JsonProcessingException {
-        ArrayList<Command> command = buildAddProjectCommand(project);
-
-
-        sendCommand(command);
-
-    }
-    private void sendCommand(Command command) throws JsonProcessingException {
-        String value = objectMapper.writeValueAsString(command);
-
-
-        Response response =
-                client.replacePath("/sync")
-                        .accept(MediaType.APPLICATION_JSON)
-                        .form(new Form().set("token",token)
-                                .set("commands",value));
-
-        response.close();
-    }
-    private void sendCommand(ArrayList<Command> command) throws JsonProcessingException {
-        String value = objectMapper.writeValueAsString(command);
-
-
-        Response response =
-                client.replacePath("/sync")
-                        .accept(MediaType.APPLICATION_JSON)
-                        .form(new Form().set("token",token)
-                                .set("commands",value));
-
-        response.close();
-    }
-
     private ArrayList<Command> buildAddProjectCommand(Project project) throws JsonProcessingException {
         ArrayList<Command> commands = new ArrayList<>();
 
@@ -347,6 +338,23 @@ public class Todoist {
         command.setArgs(args);
         commands.add(command);
         return commands;
+    }
+
+    private void sendCommand(Command command) throws JsonProcessingException {
+        sendCommand(Lists.newArrayList(command));
+    }
+
+    private void sendCommand(ArrayList<Command> command) throws JsonProcessingException {
+        String value = objectMapper.writeValueAsString(command);
+
+
+        Response response =
+                client.replacePath("/sync")
+                        .accept(MediaType.APPLICATION_JSON)
+                        .form(new Form().set("token",token)
+                                .set("commands",value));
+
+        response.close();
     }
 
 

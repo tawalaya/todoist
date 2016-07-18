@@ -1,15 +1,10 @@
-package com.todoist.api;
+package com.todoist.api.util;
 
-import org.eclipse.jetty.http.HttpStatus;
+import com.todoist.api.TodoistBuilder;
 import org.glassfish.grizzly.http.server.*;
 
-import java.awt.*;
 import java.io.*;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.concurrent.Callable;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Future;
 
 /**
  * starts a server that serves a login page lisences for the OAuth Respone
