@@ -6,7 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
 import com.google.common.collect.Lists;
 import com.todoist.api.data.*;
-import com.todoist.api.internal.ILocalStorage;
+import com.todoist.api.internal.*;
 import org.apache.cxf.jaxrs.client.WebClient;
 
 import javax.ws.rs.core.*;
@@ -23,28 +23,6 @@ public class Todoist {
     private HashMap<String, Project> projectsByName;
     private final ObjectMapper objectMapper;
 
-    public static void main(String[] args) throws ExecutionException, InterruptedException {
-//        Future<TodoistBuilder> builderFuture = null;
-//        try {
-//            OAuthInterceptorServer oAuth = new OAuthInterceptorServer();
-//            builderFuture = Executors.newSingleThreadExecutor().submit(oAuth);
-//        } catch (IOException e) {
-//        }
-//
-//        TodoistBuilder todoistBuilder = builderFuture.get();
-
-        Todoist todoist = new TodoistBuilder().setToken("e208351314f24b7513ad52dc4b8455133ee77987").build();
-
-
-        try {
-            todoist.addItem(new ItemBuilder()
-                    .setContent("Hallo")
-                    .withLabel(new LabelBuilder().setName("testLabel").build())
-                    .createItem());
-        } catch (JsonProcessingException e) {
-            e.printStackTrace();
-        }
-    }
 
     private ILocalStorage localStorage;
 

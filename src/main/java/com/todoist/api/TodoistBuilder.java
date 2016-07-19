@@ -1,7 +1,7 @@
 package com.todoist.api;
 
 import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
-import com.todoist.api.data.Token;
+import com.todoist.api.internal.Token;
 import org.apache.cxf.jaxrs.client.WebClient;
 
 import javax.ws.rs.core.MediaType;

@@ -2,13 +2,13 @@ package com.todoist.api.data;
 
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.todoist.api.data.events.Payload;
 
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
-public class Project {
+public class Project extends Payload {
 
     int id;
     String name;

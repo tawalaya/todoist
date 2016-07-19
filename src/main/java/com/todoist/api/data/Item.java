@@ -1,10 +1,11 @@
 package com.todoist.api.data;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.todoist.api.data.events.Payload;
 
 import java.util.*;
 
-public class Item {
+public class Item extends Payload {
     int id;
     int user_id;
     int project_id;

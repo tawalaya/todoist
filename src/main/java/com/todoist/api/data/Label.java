@@ -1,15 +1,13 @@
 package com.todoist.api.data;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.todoist.api.data.events.Payload;
 
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 
-/**
- * Created by Sebastian Werner on 05-Jul-16.
- */
-public class Label {
+public class Label extends Payload {
     int id;
     String name;
     int color;

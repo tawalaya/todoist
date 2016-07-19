@@ -1,4 +1,4 @@
-package com.todoist.api.data;
+package com.todoist.api.internal;
 
 public class Token {
     String access_token;

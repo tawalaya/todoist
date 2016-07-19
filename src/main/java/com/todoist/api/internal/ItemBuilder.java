@@ -1,4 +1,8 @@
-package com.todoist.api.data;
+package com.todoist.api.internal;
+
+import com.todoist.api.data.Item;
+import com.todoist.api.data.Label;
+import com.todoist.api.data.Project;
 
 import java.util.HashSet;
 import java.util.Set;

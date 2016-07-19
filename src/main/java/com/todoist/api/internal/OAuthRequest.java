@@ -1,7 +1,6 @@
-package com.todoist.api.data;
+package com.todoist.api.internal;
 
 import java.io.UnsupportedEncodingException;
-import java.net.URLEncoder;
 
 /**
  * Created by Sebastian Werner on 05-Jul-16.

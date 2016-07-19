@@ -1,4 +1,6 @@
-package com.todoist.api.data;
+package com.todoist.api.internal;
+
+import com.todoist.api.data.Label;
 
 public class LabelBuilder {
     private String name;

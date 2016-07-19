@@ -1,6 +1,9 @@
-package com.todoist.api.data;
+package com.todoist.api.internal;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.todoist.api.data.Item;
+import com.todoist.api.data.Label;
+import com.todoist.api.data.Project;
 
 import java.util.List;
 

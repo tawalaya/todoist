@@ -1,19 +1,24 @@
 package com.todoist.api.util;
 
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.io.CharStreams;
-import com.todoist.api.data.Event;
+import com.todoist.api.data.events.Event;
+import com.todoist.api.data.events.ItemEvent;
+import com.todoist.api.data.events.LabelEvent;
+import com.todoist.api.data.events.ProjectEvent;
 import org.glassfish.grizzly.http.server.HttpHandler;
 import org.glassfish.grizzly.http.server.HttpServer;
 import org.glassfish.grizzly.http.server.Request;
 import org.glassfish.grizzly.http.server.Response;
 import rx.Observable;
-import rx.Observer;
 import rx.Subscriber;
-import rx.observables.AsyncOnSubscribe;
 
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.HashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class WebHookReceiver extends HttpHandler implements Observable.OnSubscribe<Event>{
@@ -24,9 +29,10 @@ public class WebHookReceiver extends HttpHandler implements Observable.OnSubscri
 
 
     public WebHookReceiver(int port){
-        server = HttpServer.createSimpleServer("http://localhost", port);
-        server.getServerConfiguration().addHttpHandler(this);
+        server = HttpServer.createSimpleServer("http://0.0.0.0", port);
+        server.getServerConfiguration().addHttpHandler(this, "/event");
         mapper = new ObjectMapper();
+        mapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
 
     }
 
@@ -47,13 +53,32 @@ public class WebHookReceiver extends HttpHandler implements Observable.OnSubscri
     @Override
     public void service(Request request, Response response) throws Exception {
         Event event = parseRequest(request);
-        publishEvent(event);
+        if(event != null){
+            publishEvent(event);
+        }
+
         response.setStatus(200);
     }
 
     private Event parseRequest(Request request) {
         try {
-            return mapper.readValue(request.getInputStream(), Event.class);
+            String string = null;
+
+
+            string = CharStreams.toString(new InputStreamReader(request.getNIOInputStream(), "UTF-8"));
+
+            HashMap<String,String> raw = mapper.readValue(string,
+                    new TypeReference<HashMap>(){});
+
+            switch (raw.get("event_name")){
+                case "item:added":
+                    return mapper.readValue(string, ItemEvent.class);
+                case "project:added":
+                    return mapper.readValue(string, ProjectEvent.class);
+                case "label:added":
+                    return mapper.readValue(string, LabelEvent.class);
+            }
+
         } catch (IOException e) {}
 
         return null;
@@ -66,4 +91,5 @@ public class WebHookReceiver extends HttpHandler implements Observable.OnSubscri
 
         subscribers.forEach(subscriber -> subscriber.onNext(event));
     }
+
 }
