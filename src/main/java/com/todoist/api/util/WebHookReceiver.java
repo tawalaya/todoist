@@ -25,24 +25,34 @@ public class WebHookReceiver extends HttpHandler implements Observable.OnSubscri
 
     ConcurrentLinkedQueue<Subscriber<? super Event>> subscribers = new ConcurrentLinkedQueue<>();
     private final ObjectMapper mapper;
-    private final HttpServer server;
 
+    public static WebHookReceiver buildWebHookWithServer(int port,String endpointAddress) {
+        WebHookReceiver receiver = new WebHookReceiver();
 
-    public WebHookReceiver(int port){
-        server = HttpServer.createSimpleServer("http://0.0.0.0", port);
-        server.getServerConfiguration().addHttpHandler(this, "/event");
+        HttpServer server = HttpServer.createSimpleServer("http://0.0.0.0", port);
+        server.getServerConfiguration().addHttpHandler(receiver, endpointAddress);
+
+        return receiver;
+    }
+
+    private HttpServer server;
+
+    public void setServer(HttpServer server) {
+        this.server = server;
+    }
+
+    public WebHookReceiver(){
         mapper = new ObjectMapper();
         mapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
 
     }
 
-    public void startService() throws IOException{
-        server.start();
-    }
 
     public void stopService(){
         subscribers.forEach(Subscriber::unsubscribe);
-        server.shutdown();
+        if(server != null) {
+            server.shutdown();
+        }
     }
 
     @Override
